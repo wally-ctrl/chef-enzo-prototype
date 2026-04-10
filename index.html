@@ -540,6 +540,23 @@
                         border: 'none',
                     },
                 });
+                // Listen for utterance events to detect trigger words
+                window.dailyCall.on('app-message', (event) => {
+                    const data = event.data;
+                    console.log('app-message:', data);
+
+                    // Check for utterance events (from user or replica)
+                    if (data && data.event_type === 'conversation.utterance') {
+                        const text = (data.properties && data.properties.text) || '';
+                        if (text.toLowerCase().includes('garlic')) {
+                            console.log('🧄 "Garlic" detected! Showing video thumbnail.');
+                            // Hide WATCH button and show the video thumbnail
+                            document.getElementById('watchBtn').classList.add('hidden');
+                            document.getElementById('videoThumb').classList.add('visible');
+                        }
+                    }
+                });
+
                 window.dailyCall.join({ url: conversationUrl });
 
                 loading.classList.add('hidden');
