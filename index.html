@@ -416,6 +416,162 @@
         .error-msg.visible {
             display: block;
         }
+
+        /* Ingredient list panel (right side, collapsed) */
+        .ingredient-panel {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 200px;
+            max-height: 300px;
+            background: rgba(20, 20, 20, 0.92);
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 10px;
+            z-index: 15;
+            cursor: pointer;
+            opacity: 0;
+            transform: scale(0.8) translateX(20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+        }
+
+        .ingredient-panel.visible {
+            opacity: 1;
+            transform: scale(1) translateX(0);
+            pointer-events: auto;
+        }
+
+        .ingredient-panel:hover {
+            border-color: rgba(255,255,255,0.5);
+            transform: scale(1.02);
+        }
+
+        .ingredient-panel .panel-header {
+            background: #e53935;
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 10px 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ingredient-panel .panel-header svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        .ingredient-panel .ingredient-list {
+            padding: 10px 14px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .ingredient-panel .ingredient-item {
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ingredient-panel .ingredient-item:last-child {
+            border-bottom: none;
+        }
+
+        .ingredient-panel .ingredient-item .dot {
+            width: 6px;
+            height: 6px;
+            background: #e53935;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ingredient-panel .tap-hint {
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            text-align: center;
+            padding: 6px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Ingredient panel expanded (full screen) */
+        .ingredient-panel.expanded {
+            top: 0;
+            right: 0;
+            width: 100%;
+            max-height: 100%;
+            height: 100%;
+            border-radius: 0;
+            border: none;
+            transform: scale(1);
+            z-index: 8;
+            cursor: default;
+        }
+
+        .ingredient-panel.expanded .panel-header {
+            font-size: 18px;
+            padding: 20px 30px;
+        }
+
+        .ingredient-panel.expanded .ingredient-list {
+            padding: 20px 30px;
+            max-height: calc(100% - 70px);
+        }
+
+        .ingredient-panel.expanded .ingredient-item {
+            font-size: 20px;
+            padding: 12px 0;
+        }
+
+        .ingredient-panel.expanded .ingredient-item .dot {
+            width: 10px;
+            height: 10px;
+        }
+
+        .ingredient-panel.expanded .tap-hint {
+            display: none;
+        }
+
+        /* Close button for ingredients (reuse close-btn style) */
+        .close-ingredients-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 36px;
+            height: 36px;
+            background: rgba(0,0,0,0.7);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .close-ingredients-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .close-ingredients-btn:hover {
+            background: rgba(229, 57, 53, 0.9);
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
@@ -469,6 +625,19 @@
             <video id="webcamVideo" autoplay muted playsinline></video>
             <div class="pip-label">You</div>
         </div>
+
+        <!-- Ingredient panel (right side) -->
+        <div class="ingredient-panel" id="ingredientPanel" onclick="expandIngredients()">
+            <div class="panel-header">
+                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                Ingredients
+            </div>
+            <div class="ingredient-list" id="ingredientList"></div>
+            <div class="tap-hint">Click to expand</div>
+        </div>
+
+        <!-- Close button for expanded ingredients -->
+        <button class="close-ingredients-btn" id="closeIngredientsBtn" onclick="closeIngredients(event)">&#10005;</button>
 
         <!-- Quit button -->
         <button class="quit-btn" id="quitBtn" onclick="quitConversation()">QUIT</button>
@@ -540,20 +709,19 @@
                         border: 'none',
                     },
                 });
-                // Listen for utterance events to detect trigger words like "garlic"
+                // Listen for utterance events to detect keywords
                 window.dailyCall.on('app-message', (event) => {
-                    console.log('app-message raw:', JSON.stringify(event));
-
-                    // The event structure may vary — check both event.data and event directly
                     const data = event.data || event;
-
-                    // Look for any text content in the event that might contain "garlic"
                     const eventStr = JSON.stringify(data).toLowerCase();
+
+                    // Detect "garlic" — show video thumbnail
                     if (eventStr.includes('garlic')) {
-                        console.log('Garlic detected in event! Showing video thumbnail.');
                         document.getElementById('watchBtn').classList.add('hidden');
                         document.getElementById('videoThumb').classList.add('visible');
                     }
+
+                    // Detect ingredients from Enzo's speech
+                    detectIngredients(eventStr);
                 });
 
                 window.dailyCall.join({ url: conversationUrl });
@@ -626,15 +794,98 @@
             document.querySelector('#chefLoading p').textContent = 'Session ended. Thanks for cooking with Chef Enzo!';
         }
 
+        // --- Ingredient detection and panel ---
+        const KNOWN_INGREDIENTS = [
+            'garlic', 'onion', 'onions', 'salt', 'pepper', 'olive oil', 'butter',
+            'tomato', 'tomatoes', 'basil', 'oregano', 'thyme', 'rosemary',
+            'parsley', 'cilantro', 'lemon', 'lime', 'vinegar', 'sugar',
+            'flour', 'egg', 'eggs', 'milk', 'cream', 'cheese', 'parmesan',
+            'mozzarella', 'chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp',
+            'pasta', 'rice', 'bread', 'potato', 'potatoes', 'carrot', 'carrots',
+            'celery', 'mushroom', 'mushrooms', 'bell pepper', 'chili', 'ginger',
+            'soy sauce', 'wine', 'broth', 'stock', 'cumin', 'paprika',
+            'cinnamon', 'nutmeg', 'honey', 'mustard', 'mayonnaise', 'ketchup',
+            'avocado', 'spinach', 'lettuce', 'cucumber', 'zucchini', 'eggplant',
+            'corn', 'beans', 'peas', 'broccoli', 'cauliflower', 'asparagus',
+            'bacon', 'sausage', 'ham', 'anchovy', 'anchovies', 'capers',
+            'olives', 'pine nuts', 'walnuts', 'almonds', 'pecans',
+            'heavy cream', 'sour cream', 'yogurt', 'ricotta', 'mascarpone',
+            'balsamic', 'sesame oil', 'coconut', 'vanilla', 'chocolate'
+        ];
+        const detectedIngredients = new Set();
+
+        function detectIngredients(textLower) {
+            let found = false;
+            for (const ingredient of KNOWN_INGREDIENTS) {
+                // Match whole word (with word boundaries)
+                const regex = new RegExp('\\b' + ingredient.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
+                if (regex.test(textLower) && !detectedIngredients.has(ingredient)) {
+                    detectedIngredients.add(ingredient);
+                    found = true;
+                }
+            }
+            if (found) {
+                updateIngredientPanel();
+            }
+        }
+
+        function updateIngredientPanel() {
+            const list = document.getElementById('ingredientList');
+            const panel = document.getElementById('ingredientPanel');
+
+            // Build ingredient list HTML
+            list.innerHTML = Array.from(detectedIngredients).map(item =>
+                `<div class="ingredient-item"><span class="dot"></span>${item.charAt(0).toUpperCase() + item.slice(1)}</div>`
+            ).join('');
+
+            // Show the panel if not already visible
+            if (!panel.classList.contains('visible')) {
+                panel.classList.add('visible');
+            }
+        }
+
+        function expandIngredients() {
+            const panel = document.getElementById('ingredientPanel');
+            if (panel.classList.contains('expanded')) return;
+
+            panel.classList.add('expanded');
+
+            // Shrink Enzo to thumbnail (lower left)
+            document.getElementById('chefEnzo').classList.add('thumbnail');
+
+            // Show close button
+            document.getElementById('closeIngredientsBtn').classList.add('visible');
+        }
+
+        function closeIngredients(e) {
+            if (e) e.stopPropagation();
+
+            const panel = document.getElementById('ingredientPanel');
+            panel.classList.remove('expanded');
+
+            // Only restore Enzo if video player isn't also active
+            if (!document.getElementById('videoPlayer').classList.contains('active')) {
+                document.getElementById('chefEnzo').classList.remove('thumbnail');
+            }
+
+            document.getElementById('closeIngredientsBtn').classList.remove('visible');
+        }
+
         function resetConversation() {
-            // Close any playing video first
+            // Close any playing video and ingredients first
             closeVideo();
+            closeIngredients();
 
             // Destroy the existing Daily call
             if (window.dailyCall) {
                 window.dailyCall.destroy();
                 window.dailyCall = null;
             }
+
+            // Clear ingredients
+            detectedIngredients.clear();
+            document.getElementById('ingredientList').innerHTML = '';
+            document.getElementById('ingredientPanel').classList.remove('visible', 'expanded');
 
             // Clear and reset
             document.getElementById('chefEnzo').innerHTML = '';
