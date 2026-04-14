@@ -19,10 +19,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-        }
-
-        .outer-wrapper {
-            position: relative;
+            overflow: hidden;
         }
 
         .container {
@@ -420,20 +417,19 @@
             display: block;
         }
 
-        /* Ingredient list panel (below main frame, left-aligned) */
+        /* Ingredient list panel (inside frame, left-aligned) */
         .ingredient-panel {
             position: absolute;
-            top: 100%;
-            left: 0;
-            margin-top: 12px;
-            width: 260px;
-            max-height: 280px;
-            background: rgba(30, 30, 30, 0.95);
-            border: 2px solid rgba(255,255,255,0.2);
+            top: 16px;
+            left: 16px;
+            width: 200px;
+            max-height: 300px;
+            background: rgba(20, 20, 20, 0.92);
+            border: 2px solid rgba(255,255,255,0.25);
             border-radius: 10px;
             z-index: 15;
             opacity: 0;
-            transform: translateY(-10px);
+            transform: scale(0.8) translateX(-20px);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: none;
             overflow: hidden;
@@ -520,7 +516,6 @@
     </style>
 </head>
 <body>
-    <div class="outer-wrapper">
     <div class="container" id="app">
         <!-- Chef Enzo live video feed (Tavus) -->
         <div class="chef-enzo-main" id="chefEnzo"></div>
@@ -575,19 +570,18 @@
         <!-- Quit button -->
         <button class="quit-btn" id="quitBtn" onclick="quitConversation()">QUIT</button>
 
+        <!-- Ingredient panel (inside frame, left-aligned) -->
+        <div class="ingredient-panel" id="ingredientPanel">
+            <div class="panel-header">
+                <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                Ingredients
+                <button class="panel-close" onclick="closeIngredientPanel()">&#10005;</button>
+            </div>
+            <div class="ingredient-list" id="ingredientList"></div>
+        </div>
+
         <!-- Reset button -->
         <button class="reset-btn" onclick="resetConversation()">RESET</button>
-    </div>
-
-    <!-- Ingredient panel (below main frame) -->
-    <div class="ingredient-panel" id="ingredientPanel">
-        <div class="panel-header">
-            <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-            Ingredients
-            <button class="panel-close" onclick="closeIngredientPanel()">&#10005;</button>
-        </div>
-        <div class="ingredient-list" id="ingredientList"></div>
-    </div>
     </div>
 
     <script>
