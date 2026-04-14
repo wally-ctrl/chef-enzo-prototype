@@ -540,20 +540,19 @@
                         border: 'none',
                     },
                 });
-                // Listen for utterance events to detect trigger words
+                // Listen for utterance events to detect trigger words like "garlic"
                 window.dailyCall.on('app-message', (event) => {
-                    const data = event.data;
-                    console.log('app-message:', data);
+                    console.log('app-message raw:', JSON.stringify(event));
 
-                    // Check for utterance events (from user or replica)
-                    if (data && data.event_type === 'conversation.utterance') {
-                        const text = (data.properties && data.properties.text) || '';
-                        if (text.toLowerCase().includes('garlic')) {
-                            console.log('🧄 "Garlic" detected! Showing video thumbnail.');
-                            // Hide WATCH button and show the video thumbnail
-                            document.getElementById('watchBtn').classList.add('hidden');
-                            document.getElementById('videoThumb').classList.add('visible');
-                        }
+                    // The event structure may vary — check both event.data and event directly
+                    const data = event.data || event;
+
+                    // Look for any text content in the event that might contain "garlic"
+                    const eventStr = JSON.stringify(data).toLowerCase();
+                    if (eventStr.includes('garlic')) {
+                        console.log('Garlic detected in event! Showing video thumbnail.');
+                        document.getElementById('watchBtn').classList.add('hidden');
+                        document.getElementById('videoThumb').classList.add('visible');
                     }
                 });
 
