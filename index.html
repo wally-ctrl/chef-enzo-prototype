@@ -420,7 +420,7 @@
         /* Ingredient list panel (inside frame, left-aligned) */
         .ingredient-panel {
             position: absolute;
-            top: 16px;
+            top: 20%;
             left: 16px;
             width: 200px;
             max-height: 300px;
@@ -528,12 +528,6 @@
 
         <!-- Error message -->
         <div class="error-msg" id="errorMsg"></div>
-
-        <!-- WATCH button -->
-        <button class="watch-btn" id="watchBtn" onclick="showVideoThumbnail()">
-            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            WATCH
-        </button>
 
         <!-- Video thumbnail (small preview using YouTube thumbnail) -->
         <div class="video-thumbnail" id="videoThumb" onclick="expandVideo()">
@@ -654,7 +648,6 @@
 
                     // Detect "garlic" — show video thumbnail
                     if (eventStr.includes('garlic')) {
-                        document.getElementById('watchBtn').classList.add('hidden');
                         document.getElementById('videoThumb').classList.add('visible');
                     }
 
@@ -672,11 +665,6 @@
                 errorMsg.textContent = 'Could not connect to Chef Enzo: ' + err.message;
                 errorMsg.classList.add('visible');
             }
-        }
-
-        function showVideoThumbnail() {
-            document.getElementById('watchBtn').classList.add('hidden');
-            document.getElementById('videoThumb').classList.add('visible');
         }
 
         function expandVideo() {
@@ -704,8 +692,6 @@
             document.getElementById('closeBtn').classList.remove('visible');
             document.getElementById('playingIndicator').classList.remove('visible');
             document.getElementById('videoThumb').classList.remove('visible');
-
-            document.getElementById('watchBtn').classList.remove('hidden');
         }
 
         function quitConversation() {
@@ -725,7 +711,6 @@
             // Clear Enzo feed, show goodbye
             document.getElementById('chefEnzo').innerHTML = '';
             document.getElementById('webcamPip').style.display = 'none';
-            document.getElementById('watchBtn').classList.add('hidden');
             document.getElementById('quitBtn').style.display = 'none';
             document.getElementById('chefLoading').classList.remove('hidden');
             document.querySelector('#chefLoading .spinner').style.display = 'none';
