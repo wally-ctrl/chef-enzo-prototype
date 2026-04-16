@@ -513,6 +513,17 @@
             flex-shrink: 0;
         }
 
+        .ingredient-panel .ingredient-item .ingredient-name {
+            flex: 1;
+        }
+
+        .ingredient-panel .ingredient-item .ingredient-amount {
+            color: rgba(255,200,100,0.9);
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
     </style>
 </head>
 <body>
@@ -644,15 +655,22 @@
                 // Listen for utterance events to detect keywords
                 window.dailyCall.on('app-message', (event) => {
                     const data = event.data || event;
-                    const eventStr = JSON.stringify(data).toLowerCase();
+
+                    // Extract the actual spoken text (try multiple structures)
+                    let spokenText = '';
+                    if (data?.properties?.text) spokenText = data.properties.text;
+                    else if (data?.data?.properties?.text) spokenText = data.data.properties.text;
+                    else spokenText = JSON.stringify(data); // fallback
+
+                    const textLower = spokenText.toLowerCase();
 
                     // Detect "garlic" — show video thumbnail
-                    if (eventStr.includes('garlic')) {
+                    if (textLower.includes('garlic')) {
                         document.getElementById('videoThumb').classList.add('visible');
                     }
 
                     // Detect ingredients from Enzo's speech
-                    detectIngredients(eventStr);
+                    if (spokenText) detectIngredients(spokenText);
                 });
 
                 window.dailyCall.join({ url: conversationUrl });
@@ -718,50 +736,113 @@
         }
 
         // --- Ingredient detection and panel ---
-        const KNOWN_INGREDIENTS = [
-            'garlic', 'onion', 'onions', 'salt', 'pepper', 'olive oil', 'butter',
-            'tomato', 'tomatoes', 'basil', 'oregano', 'thyme', 'rosemary',
-            'parsley', 'cilantro', 'lemon', 'lime', 'vinegar', 'sugar',
-            'flour', 'egg', 'eggs', 'milk', 'cream', 'cheese', 'parmesan',
-            'mozzarella', 'chicken', 'beef', 'pork', 'fish', 'salmon', 'shrimp',
-            'pasta', 'rice', 'bread', 'potato', 'potatoes', 'carrot', 'carrots',
-            'celery', 'mushroom', 'mushrooms', 'bell pepper', 'chili', 'ginger',
-            'soy sauce', 'wine', 'broth', 'stock', 'cumin', 'paprika',
-            'cinnamon', 'nutmeg', 'honey', 'mustard', 'mayonnaise', 'ketchup',
-            'avocado', 'spinach', 'lettuce', 'cucumber', 'zucchini', 'eggplant',
-            'corn', 'beans', 'peas', 'broccoli', 'cauliflower', 'asparagus',
-            'bacon', 'sausage', 'ham', 'anchovy', 'anchovies', 'capers',
-            'olives', 'pine nuts', 'walnuts', 'almonds', 'pecans',
-            'heavy cream', 'sour cream', 'yogurt', 'ricotta', 'mascarpone',
-            'balsamic', 'sesame oil', 'coconut', 'vanilla', 'chocolate'
-        ];
-        const detectedIngredients = new Set();
 
-        function detectIngredients(textLower) {
+        // Canonical ingredient names (singular form used as key)
+        const INGREDIENTS = [
+            'garlic', 'onion', 'shallot', 'leek', 'chive',
+            'salt', 'pepper', 'black pepper', 'red pepper flakes', 'white pepper',
+            'olive oil', 'vegetable oil', 'canola oil', 'sesame oil', 'coconut oil',
+            'butter', 'ghee', 'lard',
+            'tomato', 'cherry tomato', 'sun-dried tomato',
+            'basil', 'oregano', 'thyme', 'rosemary', 'parsley', 'cilantro',
+            'mint', 'sage', 'bay leaf', 'dill', 'tarragon',
+            'lemon', 'lime', 'orange', 'lemon juice', 'lime juice',
+            'vinegar', 'balsamic vinegar', 'red wine vinegar', 'apple cider vinegar',
+            'sugar', 'brown sugar', 'honey', 'maple syrup',
+            'flour', 'bread crumbs', 'panko',
+            'egg', 'egg yolk', 'egg white',
+            'milk', 'cream', 'heavy cream', 'sour cream', 'half and half',
+            'cheese', 'parmesan', 'mozzarella', 'cheddar', 'feta', 'ricotta',
+            'mascarpone', 'goat cheese', 'gruyere',
+            'chicken', 'chicken breast', 'chicken thigh', 'chicken stock', 'chicken broth',
+            'beef', 'ground beef', 'beef broth', 'beef stock',
+            'pork', 'bacon', 'pancetta', 'prosciutto', 'sausage', 'chorizo', 'ham',
+            'lamb', 'veal',
+            'fish', 'salmon', 'tuna', 'cod', 'tilapia', 'shrimp', 'scallop',
+            'clam', 'mussel', 'crab', 'lobster', 'anchovy',
+            'pasta', 'spaghetti', 'penne', 'fettuccine', 'rigatoni', 'linguine',
+            'rice', 'arborio rice', 'basmati rice', 'jasmine rice',
+            'bread', 'sourdough', 'baguette',
+            'potato', 'sweet potato', 'yam',
+            'carrot', 'celery', 'mushroom', 'shiitake', 'portobello',
+            'bell pepper', 'jalapeño', 'chili', 'serrano', 'poblano',
+            'zucchini', 'eggplant', 'squash', 'pumpkin',
+            'spinach', 'kale', 'arugula', 'lettuce', 'cabbage', 'bok choy',
+            'broccoli', 'cauliflower', 'asparagus', 'green bean', 'pea',
+            'corn', 'artichoke', 'avocado', 'cucumber', 'radish',
+            'ginger', 'turmeric', 'cumin', 'coriander', 'paprika', 'smoked paprika',
+            'cinnamon', 'nutmeg', 'cardamom', 'clove', 'allspice', 'cayenne',
+            'chili powder', 'curry powder', 'garam masala', 'za\'atar',
+            'soy sauce', 'fish sauce', 'worcestershire', 'hot sauce', 'tabasco',
+            'mustard', 'dijon mustard', 'mayonnaise', 'ketchup', 'sriracha',
+            'tomato paste', 'tomato sauce',
+            'wine', 'white wine', 'red wine', 'sherry', 'marsala',
+            'broth', 'stock', 'vegetable broth', 'water',
+            'beans', 'chickpea', 'lentil', 'black bean', 'kidney bean', 'cannellini',
+            'olives', 'capers', 'sun-dried tomatoes',
+            'pine nuts', 'walnut', 'almond', 'pecan', 'cashew', 'pistachio',
+            'raisin', 'dried cranberry', 'dried apricot',
+            'yogurt', 'coconut milk', 'coconut cream',
+            'vanilla', 'vanilla extract', 'chocolate', 'cocoa',
+            'baking powder', 'baking soda', 'yeast', 'cornstarch',
+            'sesame seed', 'poppy seed', 'flax seed',
+            'truffle oil', 'caramelized onion', 'roasted garlic'
+        ];
+
+        // Units for quantity extraction
+        const UNITS = 'cups?|tablespoons?|tbsps?|teaspoons?|tsps?|ounces?|oz|pounds?|lbs?|grams?|g|kg|cloves?|heads?|pieces?|slices?|pinch(?:es)?|dash(?:es)?|handfuls?|bunch(?:es)?|cans?|sticks?|sprigs?|stalks?|strips?|fillets?|ml|liters?|quarts?|pints?';
+        const NUMBERS = '(?:\\d+(?:[\\./]\\d+)?|a|an|one|two|three|four|five|six|seven|eight|nine|ten|half|quarter|dozen|few|some|couple(?:\\s+of)?)';
+        const ADJECTIVES = '(?:fresh|dried|chopped|minced|diced|sliced|grated|shredded|crushed|ground|whole|large|medium|small|ripe|raw|cooked|frozen|canned|roasted|toasted|boneless|skinless|peeled|seeded)\\s+';
+
+        // Map from canonical ingredient name → { label, amount }
+        const detectedIngredients = new Map();
+
+        function detectIngredients(text) {
+            const textLower = text.toLowerCase();
             let found = false;
-            for (const ingredient of KNOWN_INGREDIENTS) {
-                // Match whole word (with word boundaries)
-                const regex = new RegExp('\\b' + ingredient.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
-                if (regex.test(textLower) && !detectedIngredients.has(ingredient)) {
-                    detectedIngredients.add(ingredient);
+
+            for (const ingredient of INGREDIENTS) {
+                if (detectedIngredients.has(ingredient)) continue;
+
+                const escaped = ingredient.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+                // Try to match with optional quantity and unit before it
+                const fullPattern = new RegExp(
+                    '(?:(' + NUMBERS + ')\\s+)?(?:(' + UNITS + ')\\s+)?(?:of\\s+)?(?:' + ADJECTIVES + ')?\\b(' + escaped + 's?\\b)',
+                    'i'
+                );
+
+                const match = textLower.match(fullPattern);
+                if (match) {
+                    const qty = match[1] || '';
+                    const unit = match[2] || '';
+                    let amount = [qty, unit].filter(Boolean).join(' ');
+                    // Capitalize amount nicely
+                    if (amount) amount = amount.charAt(0).toUpperCase() + amount.slice(1);
+                    detectedIngredients.set(ingredient, { label: capitalize(ingredient), amount });
                     found = true;
                 }
             }
-            if (found) {
-                updateIngredientPanel();
-            }
+
+            if (found) updateIngredientPanel();
+        }
+
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
         }
 
         function updateIngredientPanel() {
             const list = document.getElementById('ingredientList');
             const panel = document.getElementById('ingredientPanel');
 
-            // Build ingredient list HTML
-            list.innerHTML = Array.from(detectedIngredients).map(item =>
-                `<div class="ingredient-item"><span class="dot"></span>${item.charAt(0).toUpperCase() + item.slice(1)}</div>`
+            list.innerHTML = Array.from(detectedIngredients.values()).map(({ label, amount }) =>
+                `<div class="ingredient-item">
+                    <span class="dot"></span>
+                    <span class="ingredient-name">${label}</span>
+                    ${amount ? `<span class="ingredient-amount">${amount}</span>` : ''}
+                </div>`
             ).join('');
 
-            // Show the panel if not already visible
             if (!panel.classList.contains('visible')) {
                 panel.classList.add('visible');
             }
@@ -784,7 +865,7 @@
             // Clear ingredients
             detectedIngredients.clear();
             document.getElementById('ingredientList').innerHTML = '';
-            document.getElementById('ingredientPanel').classList.remove('visible', 'expanded');
+            document.getElementById('ingredientPanel').classList.remove('visible');
 
             // Clear and reset
             document.getElementById('chefEnzo').innerHTML = '';
